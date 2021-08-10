@@ -1,0 +1,6 @@
+build/
+csdk
+.config
+config.h
+*.old
+.vscode/
