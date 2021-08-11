@@ -8,6 +8,7 @@
 
 HANDLE main_task_handle=NULL;
 extern void bleStart(void);
+extern void socket_init(void);
 
 static void main_task(PVOID pParameter)
 {
@@ -28,7 +29,8 @@ int appimg_enter(void *param)
     iot_pmd_exit_deepsleep();
     app_debug_init();
     main_task_handle = iot_os_create_task(main_task, NULL, 1024, 1, OPENAT_OS_CREATE_DEFAULT, "main");
-    bleStart();
+    //bleStart();
+    socket_init();
     return 0;
 }
 void appimg_exit(void)

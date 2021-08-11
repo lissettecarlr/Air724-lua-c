@@ -7,6 +7,7 @@
 #include "debug.h"
 #include "stdio.h"
 
+extern int socketTcpSend(char *data,int len);
 HANDLE  ble_test_handle = NULL;
 
 typedef struct BT_ADDRESS
@@ -268,7 +269,12 @@ BOOL ble_data_trans(VOID)
             app_debug_print("[bluetooth]uuid %x",msg->uuid);
             app_debug_print("[bluetooth]dataLen %d",msg->len);  
 
+            //socket send 蓝牙接收快于socket发送，所以需要一个缓存
+            //这里就不断往缓存里面抛，tcp发送线程在发现有缓存就不断上发
+            socketTcpSend((char *)msg->bleRcvBuffer,msg->len);
+
             AppConvertBinToHex(msg->bleRcvBuffer,msg->len,bleRcvBuffer);
+
             bleRcvBuffer[msg->len*2] = '\0';
             app_debug_print("[bluetooth]data %s",bleRcvBuffer);
             if(bleRcvBuffer != NULL)

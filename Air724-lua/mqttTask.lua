@@ -36,7 +36,7 @@ sys.taskInit(
                 local imei = misc.getImei()
                 --创建一个MQTT客户端
                 local mqttClient = mqtt.client(imei,600,"fff","fff")
-                if mqttClient:connect("test.kala.love",1883,"tcp") then
+                if mqttClient:connect("roker.emqx.io",1883,"tcp") then
                     retryConnectCnt = 0
                     ready = true
                     --订阅主题
