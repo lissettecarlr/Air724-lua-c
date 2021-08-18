@@ -40,9 +40,12 @@ void socket_msg_send(HANDLE hTask, SocketStatus_t status, void *param, UINT32 le
 #define SERVER_TCP_PORT 5001
 
                         
-static HANDLE g_s_socket_task_connect;
-static HANDLE g_s_socket_task_send;
-static HANDLE g_s_socket_task_rcv;
+// static HANDLE g_s_socket_task_connect;
+// static HANDLE g_s_socket_task_send;
+// static HANDLE g_s_socket_task_rcv;
+
+static HANDLE socketTaskHandle;
+
 static int socketHandle=0;
 
 static HANDLE timerSocketReconnect;
@@ -55,7 +58,7 @@ static HANDLE timerSocketRcv;
 */
 VOID timerSocketReconnectHandle(void *p)
 {
-    socket_msg_send(g_s_socket_task_connect,SOCKET_CONNECT,0,0);
+    socket_msg_send(socketTaskHandle,SOCKET_CONNECT,0,0);
 }
 
 /**
@@ -63,7 +66,9 @@ VOID timerSocketReconnectHandle(void *p)
 */
 VOID timerSocketRcvHandle(void *p)
 {
-    socket_msg_send(g_s_socket_task_connect,SOCKET_RECV,0,0);
+    /*重置定时器*/
+    iot_os_start_timer(timerSocketRcv, 1000);
+    socket_msg_send(socketTaskHandle,SOCKET_RECV,0,0);
 }
 
 /**
@@ -76,6 +81,7 @@ int socketTcpSend(char *data,int len)
 {
     if(socketHandle < 0)
         app_debug_print("[socket] socketHandle<0\n");
+    
     int rt = send(socketHandle,data,len,0);
     app_debug_print("[socket] tcp send data result = %d\n", rt);
     if(rt<0)
@@ -115,12 +121,11 @@ static int demo_socket_tcp_connect_server(char *inputIp,unsigned short inputPort
 
     app_debug_print("[socket] tcp connect to addr %s\n", inputIp);
    
- 
     connErr = connect(socketfd, (const struct sockaddr *)&tcp_server_addr, sizeof(struct openat_sockaddr));
     if(connErr <0)
     {
         app_debug_print("[socket] tcp connect error %d\n", socket_errno(socketfd));
-        return -1
+        return -1;
     }
     else
     {
@@ -172,12 +177,12 @@ static void demo_networkIndCallBack(E_OPENAT_NETWORK_STATE state)
     app_debug_print("[socket] network ind state %d\n", state);
     if(state == OPENAT_NETWORK_LINKED)
     {
-        socket_msg_send(g_s_socket_task_connect,NETWORK_LINKED,0,0);
+        socket_msg_send(socketTaskHandle,NETWORK_LINKED,0,0);
         return;
     }
     else if(state == OPENAT_NETWORK_READY)//回调准备就绪后发送消息
     {
-        socket_msg_send(g_s_socket_task_connect,NETWORK_READY,0,0);
+        socket_msg_send(socketTaskHandle,NETWORK_READY,0,0);
         return;
     }
     //iot_os_free(msgptr);
@@ -238,18 +243,24 @@ static void socket_task(PVOID p)
     timerSocketReconnect = iot_os_create_timer(timerSocketReconnectHandle,0);
     while (1)
     {
-        iot_os_wait_message(g_s_socket_task_connect, (PVOID)&msg);
+        iot_os_wait_message(socketTaskHandle, (PVOID)&msg);
         switch (msg->type)
         {
             case NETWORK_READY:
             {
                 app_debug_print("[socket] network connecting....\n");
                 demo_network_connetck();
+                if(msg != NULL)
+                    iot_os_free(msg);
+                msg = NULL;
             }break;
             case NETWORK_LINKED:
             {
                 app_debug_print("[socket] network connected\n");
-                socket_msg_send(g_s_socket_task_connect,SOCKET_CONNECT,0,0);
+                socket_msg_send(socketTaskHandle,SOCKET_CONNECT,0,0);
+                if(msg != NULL)
+                    iot_os_free(msg);
+                msg = NULL;                
             }break;
             case SOCKET_CONNECT:
             {
@@ -260,18 +271,30 @@ static void socket_task(PVOID p)
                 //如果连接失败则延时再次尝试，启动再次连接定时器，超时发送SOCKET_CONNECT
                 if(socketHandle<0)
                 {
-                    iot_os_start_timer(g_demo_timer1, 20*TIMER_1S);
+                    iot_os_start_timer(timerSocketReconnect, 20*1000);
                 }
                 else
                 {
-                    //启动数据接收定时器，超时发送SOCKET_RECV
-
+                    //启动数据接收定时器
+                    iot_os_start_timer(timerSocketRcv, 1000);
                 }
+                if(msg != NULL)
+                    iot_os_free(msg);
+                msg = NULL;                
             }
                 break;
+            //开始发送，从fifo中取出，循环发送
             case SOCKET_SEND:
+                app_debug_print("send msg\n");
+                if(msg != NULL)
+                    iot_os_free(msg);
+                msg = NULL;
                 break;
             case SOCKET_RECV:
+                app_debug_print("rcv msg\n");
+                if(msg != NULL)
+                    iot_os_free(msg);
+                msg = NULL;                
                 break;
             default:
                 break;
@@ -287,27 +310,12 @@ void socket_init(void)
     //注册网络状态回调函数
     iot_network_set_cb(demo_networkIndCallBack);
 
-    g_s_socket_task_connect = iot_os_create_task(socket_task,
+    socketTaskHandle = iot_os_create_task(socket_task,
                         NULL,
                         2046,
                         5,
                         OPENAT_OS_CREATE_DEFAULT,
-                        "socket_connect");
-
-    g_s_socket_task_send = iot_os_create_task(socket_task_send,
-                        NULL,
-                        1024,
-                        6,
-                        OPENAT_OS_CREATE_DEFAULT,
-                        "socket_send");
-
-    g_s_socket_task_rcv = iot_os_create_task(socket_task_rcv,
-                        NULL,
-                        1024,
-                        6,
-                        OPENAT_OS_CREATE_DEFAULT,
-                        "socket_rcv");
-
+                        "socket_task");
 }
 
 

@@ -23,6 +23,7 @@ void app_debug_init()
     iot_uart_open(OPENAT_UART_2,&uartCfg);
 }
 
+
 //输出调试信息
 void app_debug_print(const char * fmt,...)
 {

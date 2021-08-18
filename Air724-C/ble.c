@@ -2,10 +2,10 @@
 	demo_bluetooth
 ****************/
 #include "string.h"
-#include "iot_debug.h"
 #include "iot_bluetooth.h"
 #include "debug.h"
 #include "stdio.h"
+#include "fifo.h"
 
 extern int socketTcpSend(char *data,int len);
 HANDLE  ble_test_handle = NULL;
@@ -266,17 +266,20 @@ BOOL ble_data_trans(VOID)
         if(msg->eventid == OPENAT_BLE_RECV_DATA)
         {
             bleRcvBuffer = iot_os_malloc(BLE_MAX_DATA_COUNT*2+1);
-            app_debug_print("[bluetooth]uuid %x",msg->uuid);
-            app_debug_print("[bluetooth]dataLen %d",msg->len);  
-
-            //socket send 蓝牙接收快于socket发送，所以需要一个缓存
-            //这里就不断往缓存里面抛，tcp发送线程在发现有缓存就不断上发
-            socketTcpSend((char *)msg->bleRcvBuffer,msg->len);
+            //app_debug_print("[bluetooth]uuid %x",msg->uuid);
+            //app_debug_print("[bluetooth]dataLen %d",msg->len);  
+            static int test=0;
+            if(msg->uuid == 0xfff1)
+            {
+                //app_debug_print("fifo input size=%d\n",test++);
+                inputTrack(msg->bleRcvBuffer,msg->len);
+                app_debug_print("fifo input size=%d\n",getTrackFifoLen());
+            }
+            
 
             AppConvertBinToHex(msg->bleRcvBuffer,msg->len,bleRcvBuffer);
-
             bleRcvBuffer[msg->len*2] = '\0';
-            app_debug_print("[bluetooth]data %s",bleRcvBuffer);
+            //app_debug_print("[bluetooth]data %s",bleRcvBuffer);
             if(bleRcvBuffer != NULL)
                 iot_os_free(bleRcvBuffer);
             bleRcvBuffer = NULL;
