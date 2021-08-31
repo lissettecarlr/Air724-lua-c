@@ -15,7 +15,8 @@ module(..., package.seeall)
 local ip,port,c = "180.97.81.180", "56249"
 
 -- local pen_addr = "d8:0b:cb:61:02:e7"
-local pen_addr =    "54:b7:e5:79:f4:49"
+-- local pen_addr =    "54:b7:e5:79:f4:49"
+local pen_addr =    "d8:0b:cb:61:4d:84"
 local bt_test = {}
 
 local function init()
