@@ -12,11 +12,11 @@ require "myDebug"
 module(..., package.seeall)
 
 --local ip,prot,c = "47.108.200.115", "1883"     
-local ip,port,c = "180.97.81.180", "56249"
+-- local ip,port,c = "47.108.178.9'", "3000"
 
 -- local pen_addr = "d8:0b:cb:61:02:e7"
--- local pen_addr =    "54:b7:e5:79:f4:49"
-local pen_addr =    "d8:0b:cb:61:4d:84"
+local pen_addr =    "54:b7:e5:79:f4:49"
+-- local pen_addr = "d8:0b:cb:61:4d:84"
 local bt_test = {}
 
 local function init()
@@ -186,19 +186,22 @@ end
 -- local last_time=0
 -- local second_times=0
 -- local pck
--- [包头]+[包长]+[秒级时间戳]+[原AP封装包]
+local PckNumber = 0
+-- [首部]+[协议版本 协议类型]+[包长]+[MAC]+[秒级时间戳]+[包编号]+[原AP封装包]
 function tcp_decode(data,len)
-    local head="f0aa"  
+    -- F0AA0101 001E 112233445566 010203040506 0001 A1A2A3A4A5A6A7A8A9A0
+    local head="F0AA0101"  
     --毫秒级时间戳
     local time="010203040506"
     local mac = string.gsub(pen_addr, ':',"")
-    local pcklen = string.format("%04x",len+6+6) 
+    local pcklen = string.format("%04x",len+6+6+6+2)
+    PckNumber = PckNumber+1 
+    local pckNo = string.format("%04x",PckNumber) 
     local temp = string.toHex(data)
     local pck=""
-    pck = head .. pcklen ..mac .. time .. temp
+    pck = head .. pcklen ..mac .. time .. pckNo .. temp
     return str2hex(pck)
     -- return pck
-
 end
 
 function ap_data(data,len)
@@ -286,20 +289,20 @@ local function data_trans()
 
                 -- TPC上传
                 -- 测试TCP，包前面加个序号,以字符串发送
-                data2 = test_TCP_decode(data)
-                log.info("socket发送：",data2)
-                mySocket.send(data2)
-                --mySocket.send(str2hex(data2))
+                -- data2 = test_TCP_decode(data)
+                -- log.info("socket发送：",data2)
+                -- mySocket.send(data2)
+   
         
                 --旧版AP封包，以字节发送
-                local oldPck = ap_data(data,recvlen)
-                log.info("旧版封包：",string.toHex(oldPck))
+                -- local oldPck = ap_data(data,recvlen)
+                -- log.info("旧版封包：",string.toHex(oldPck))
                 --mySocket.send(oldPck)
 
                 --新版封包，以字节发送
                 local newPck = tcp_decode(data,recvlen)
                 log.info("新版封包：",string.toHex(newPck))
-                --mySocket.send(newPck)
+                mySocket.send(newPck)
                 
             end
             if( (recvlen == 14))then

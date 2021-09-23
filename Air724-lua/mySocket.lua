@@ -1,6 +1,10 @@
 require "socket"
 module(...,package.seeall)
 
+
+local tcpServerIp = "47.108.178.9"
+local tcpServerPort = "3001"
+
 local ready = false
 
 --- socket连接是否处于激活状态
@@ -58,7 +62,8 @@ local function sndHeartCb(result)
     if result then sys.timerStart(sndHeart,60000) end
 end
 function sndHeart()
-    insertMsg(heartPck,{cb=sndHeartCb})
+    log.info("heart!")
+    -- insertMsg(heartPck,{cb=sndHeartCb})
 end
 
 local function sndLocCb(result)
@@ -118,6 +123,7 @@ end
 ----------------------------------------------------------------------------------
 local gol_hanld
 --启动socket客户端任务
+
 sys.taskInit(
     function()
         local retryConnectCnt = 0
@@ -133,11 +139,12 @@ sys.taskInit(
                 local socketClient = socket.tcp()
                 gol_hanld = socketClient
                 --阻塞执行socket connect动作，直至成功
-                if socketClient:connect("36.137.134.5","5001") then
+                if socketClient:connect(tcpServerIp,tcpServerPort) then
+                    log.info("TCP连接成功")
                     retryConnectCnt = 0
                     ready = true
 
-                    send("smartpen connect")
+                    --send("smartpen connect")
                     socketOutMsgInit()
                     --循环处理接收和发送的数据
                     while true do
@@ -149,10 +156,11 @@ sys.taskInit(
                     ready = false
                 else
                     retryConnectCnt = retryConnectCnt+1
+                    log.info("TCP连接失败",retryConnectCnt)
                 end
                 --断开socket连接
                 socketClient:close()
-                if retryConnectCnt>=5 then link.shut() retryConnectCnt=0 end
+                -- if retryConnectCnt>=5 then link.shut() retryConnectCnt=0 end
                 sys.wait(5000)
             else
                 --进入飞行模式，20秒之后，退出飞行模式

@@ -62,11 +62,10 @@ errDump.request("udp://ota.airm2m.com:9072")
 --加载BLE功能测试模块
 require "master" --主设备
 require "timeSync"
---require "mqttTask"
+require "mqttTask"
 --require "slave"  --从设备
 --require "beacon"  --beacon
 require "common"
-
 
 
 local oled = require "i2c_ssd1306_oled"--包含库文件
