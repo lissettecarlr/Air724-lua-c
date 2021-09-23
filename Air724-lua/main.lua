@@ -80,7 +80,7 @@ local function Test_Task()
     local flag=1
 
     while true do
-        log.info("Test_Task_run")
+        log.info("OLED_Task_run")
         tCk = os.date("*t")
         nyr = string.format("%04d-%02d-%02d",tCk.year,tCk.month,tCk.day)
         sfm = string.format("%02d:%02d:%02d",tCk.hour,tCk.min,tCk.sec)

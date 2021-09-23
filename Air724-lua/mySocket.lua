@@ -53,37 +53,36 @@ local function insertMsg(data,user)
 end
 
 -- 心跳包
-local heartPck="heart data\r\n"
-function setHeartPck(newStr)
-    heartPck = newStr
-end
-local function sndHeartCb(result)
-    log.info("socketOutMsg.sndHeartCb",result)
-    if result then sys.timerStart(sndHeart,60000) end
-end
-function sndHeart()
-    log.info("heart!")
-    -- insertMsg(heartPck,{cb=sndHeartCb})
-end
+-- local heartPck="heart data\r\n"
+-- function setHeartPck(newStr)
+--     heartPck = newStr
+-- end
+-- local function sndHeartCb(result)
+--     log.info("socketOutMsg.sndHeartCb",result)
+--     if result then sys.timerStart(sndHeart,60000) end
+-- end
+-- function sndHeart()
+--     log.info("heart!")
+--     -- insertMsg(heartPck,{cb=sndHeartCb})
+-- end
 
-local function sndLocCb(result)
-    log.info("socketOutMsg.sndLocCb",result)
-    if result then sys.timerStart(sndLoc,20000) end
-end
+-- local function sndLocCb(result)
+--     log.info("socketOutMsg.sndLocCb",result)
+--     if result then sys.timerStart(sndLoc,20000) end
+-- end
 
-function sndLoc()
-    insertMsg("location data\r\n",{cb=sndLocCb})
-end
+-- function sndLoc()
+--     insertMsg("location data\r\n",{cb=sndLocCb})
+-- end
 
 function sendCB()
-    log.info("socket send cb",result)
+    log.info("socket send cb 发送回调")
 end
 
 function send(data)
     log.info("tset send","socket send")
     insertMsg(data,{cb=sendCB})
 end
-
 
 --- 初始化“socket客户端数据发送”
 -- @return 无
@@ -96,14 +95,15 @@ end
 --- 去初始化“socket客户端数据发送”
 -- @return 无
 -- @usage socketOutMsg.unInit()
-function socketOutMsgUnInit()
-    sys.timerStop(sndHeart)
-    sys.timerStop(sndLoc)
-    while #msgQueue>0 do
-        local outMsg = table.remove(msgQueue,1)
-        if outMsg.user and outMsg.user.cb then outMsg.user.cb(false,outMsg.user.para) end
-    end
-end
+
+-- function socketOutMsgUnInit()
+--     sys.timerStop(sndHeart)
+--     sys.timerStop(sndLoc)
+--     while #msgQueue>0 do
+--         local outMsg = table.remove(msgQueue,1)
+--         if outMsg.user and outMsg.user.cb then outMsg.user.cb(false,outMsg.user.para) end
+--     end
+-- end
 
 --- socket客户端数据发送处理
 -- @param socketClient，socket客户端对象
@@ -111,12 +111,14 @@ end
 -- @usage socketOutMsg.proc(socketClient)
 function socketOutMsgProc(socketClient)
     while #msgQueue>0 do
-        local outMsg = table.remove(msgQueue,1)
-        local result = socketClient:send(outMsg.data)
-        if outMsg.user and outMsg.user.cb then 
-            outMsg.user.cb(result,outMsg.user.para) 
+        local outMsg = table.remove(msgQueue,1) --取出数据
+        local result = socketClient:send(outMsg.data)--发送
+        -- if outMsg.user and outMsg.user.cb then 
+        --     outMsg.user.cb(result,outMsg.user.para) --触发回调
+        -- end
+        if not result then 
+            return false
         end
-        if not result then return end
     end
     return true
 end
@@ -145,13 +147,19 @@ sys.taskInit(
                     ready = true
 
                     --send("smartpen connect")
-                    socketOutMsgInit()
+                    -- socketOutMsgInit()
                     --循环处理接收和发送的数据
                     while true do
-                        if not socketInMsgproc(socketClient) then log.error("socketTask.socketInMsg.proc error") break end
-                        if not socketOutMsgProc(socketClient) then log.error("socketTask.socketOutMsg proc error") break end
+                        --暂时不需要接收
+                        sys.wait(50)
+                        --if not socketInMsgproc(socketClient) then log.error("socketTask.socketInMsg.proc error") break end
+                        if not socketOutMsgProc(socketClient) then 
+                            log.error("socketTask.socketOutMsg proc error 发送失败") 
+                            --break 
+                    
+                        end
                     end
-                    socketOutMsgUnInit()
+                    -- socketOutMsgUnInit()
 
                     ready = false
                 else
