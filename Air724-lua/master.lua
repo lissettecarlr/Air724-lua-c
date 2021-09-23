@@ -1,11 +1,3 @@
---- 模块功能：蓝牙功能测试
--- @author openLuat
--- @module bluetooth.master
--- @license MIT
--- @copyright openLuat
--- @release 2020.09.27
--- @注意 需要使用core(Luat_VXXXX_RDA8910_BT_FLOAT)版本
-
 require "mySocket"
 require "myDebug"
 
@@ -168,19 +160,6 @@ function str2hex(str)
 	return ret
 end
 
--- 封装丢包测试数据
---[head]+[cnt]+[data]
-local TCPCt=0
-function test_TCP_decode(data)
-    local test_data
-    local head="FF11"
-    TCPCt=TCPCt+1
-    local strCt = string.format("%04x",TCPCt)
-    test_data1  = string.toHex(data)
-    test_data2 = head .. strCt .. test_data1
-    return str2hex(test_data2)
-end
-
 
 
 -- local last_time=0
@@ -274,73 +253,32 @@ local function data_trans()
             log.info("数据长度",string.format("%d",recvlen))
             -- log.info("数据长度复印",string.format("%d",recvlen))
 
-            if(recvlen%10==0)then
-                log.info("——————————————————","开始")
-                log.info("移动点和落笔点",string.toHex(data))
-                --log.info("移动点和落笔点复印",string.toHex(data))
-                log.info("——————————————————","结束")
-                --测试丢包
-                log.info("——————————————————","测试输入")
-                log.info("recvlen",recvlen)
+            local testData = string.sub(recvdata, 1, 1)
+            test2Data = string.toHex(testData)
 
 
-                --测试蓝牙丢包
-                myDebug.decode(data,recvlen)
-
-                -- TPC上传
-                -- 测试TCP，包前面加个序号,以字符串发送
-                -- data2 = test_TCP_decode(data)
-                -- log.info("socket发送：",data2)
-                -- mySocket.send(data2)
-   
-        
-                --旧版AP封包，以字节发送
-                -- local oldPck = ap_data(data,recvlen)
-                -- log.info("旧版封包：",string.toHex(oldPck))
-                --mySocket.send(oldPck)
-
-                --新版封包，以字节发送
+            if(test2Data == 'C1')then --报告离线数据
+                offlineDataSizeStr = string.sub(recvdata, 3, 6)
+                log.info("数据类型：","离线数据长度-->" .. string.toHex(offlineDataSizeStr))
+            elseif(test2Data == 'D1')then  --压力值应答
+                log.info("数据类型：","压力数据")
+            elseif(test2Data == 'E5')then  
+                log.info("数据类型：","笔型号")  
+            elseif(test2Data == 'A9')then  
+                log.info("数据类型：","笔电量-->")  
+            elseif(test2Data == 'FE' or test2Data == 'FC')then
+                log.info("数据类型：","落笔点或移动点-->" .. string.toHex(data))
                 local newPck = tcp_decode(data,recvlen)
                 log.info("新版封包：",string.toHex(newPck))
                 mySocket.send(newPck)
-                
+            elseif(test2Data == 'E1')then
+                log.info("数据类型：","点读码-->" .. string.toHex(data))
+            else
+                log.info("未知数据：",string.toHex(data))         
             end
-            if( (recvlen == 14))then
-                log.info("——————————————————","开始")
-                log.info("点读码",string.toHex(data))
-                --log.info("点读码复印",string.toHex(data))
-                log.info("——————————————————","结束")
-            end
-            if(recvlen <10)then
-                log.info("——————————————————","开始")
-                log.info("未知数据",string.toHex(data))
-                --log.info("未知数据复印",string.toHex(data))
-                log.info("——————————————————","结束")
-            end
-            
+       
         end
 
-        -- if(uuid == 0XFFF1)then
-        --     show_data = string.gsub(data,"(.)",function (x) return string.format("%02X",string.byte(x)) end)
-        --     log.info("rcv-len=",len)
-        --     log.info("----->",show_data)
-        --     --如果是数据包则
-        --     test = ap_data(data,len)
-        --     --如果是电量包则
-        --     local show_test = string.gsub(test,"(.)",function (x) return string.format("%02X",string.byte(x)) end)
-        --     log.info("=====>",show_test)
-        --     --log.info("time:",os.time())  --1623816034
-        -- else
-        --     --str_uuid = string.format("%x",uuid)
-        --     log.info("rcv__uuid",uuid)
-        -- end
-
-
-        -- if len ~= 0 then
-        -- data = ap_data(data,len)
-        -- local recv_data = string.gsub(data,"(.)",function (x) return string.format("%02X",string.byte(x)) end)
-        -- log.info("bt.recv_date   = ",recv_data)
-        -- end
     end
 end
 
