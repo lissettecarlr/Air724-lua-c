@@ -155,7 +155,7 @@ sys.taskInit(
                         --if not socketInMsgproc(socketClient) then log.error("socketTask.socketInMsg.proc error") break end
                         if not socketOutMsgProc(socketClient) then 
                             log.error("socketTask.socketOutMsg proc error 发送失败") 
-                            --break 
+                            break 
                     
                         end
                     end

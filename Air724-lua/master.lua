@@ -9,7 +9,8 @@ module(..., package.seeall)
 -- local pen_addr = "d8:0b:cb:61:02:e7"
 local pen_addr =    "54:b7:e5:79:f4:49"
 -- local pen_addr = "d8:0b:cb:61:4d:84"
-local bt_test = {}
+
+btStatus = false
 
 local function init()
     log.info("bt", "init")
@@ -20,6 +21,7 @@ local function init()
             sys.publish("BT_CONNECT_IND", {["handle"] = msg.handle, ["result"] = msg.result}) --蓝牙连接成功
         elseif msg.event == btcore.MSG_BLE_DISCONNECT_CNF then
             log.info("bt", "ble disconnect") --蓝牙断开连接
+            btStatus = false
         elseif msg.event == btcore.MSG_BLE_DATA_IND then
             sys.publish("BT_DATA_IND", {["data"] = msg.data, ["uuid"] = msg.uuid, ["len"] = msg.len})  --接收到的数据内容
         elseif msg.event == btcore.MSG_BLE_SCAN_CNF then
@@ -47,7 +49,7 @@ local function poweron()
 end
 
 local function connect()
-    log.info("bt", "connect")
+    log.info("开始蓝牙连接", "对象MAC：" .. pen_addr)
     btcore.connect(pen_addr)
     return true
 end
@@ -210,6 +212,8 @@ local function data_trans()
     if bt_connect.result ~= 0 then
         return false
     end
+    --修改蓝牙状态为已连接
+    btStatus = true
     --链接成功
     log.info("bt.connect_handle", bt_connect.handle)--蓝牙连接句柄
     log.info("bt", "find all service uuid")
@@ -238,59 +242,77 @@ local function data_trans()
     
     local socketConnect=0
     while true do
-        _, bt_recv = sys.waitUntil("BT_DATA_IND") --等待接收到数据
-        local data = ""
-        local uuid = ""
-        while true do
-            local recvuuid, recvdata, recvlen = btcore.recv(244)
-            if recvlen == 0 then
+        ret,bt_recv = sys.waitUntil("BT_DATA_IND",10000) --等待接收到数据
+        if(ret == true) then --接收到事件
+            local data = ""
+            local uuid = ""
+            while true do
+                local recvuuid, recvdata, recvlen = btcore.recv(244)
+                if recvlen == 0 then
+                    break
+                end
+                uuid = recvuuid
+                data = data .. recvdata
+                log.info("——————————————————","收到数据")
+                log.info("接收到的UUID", string.toHex(uuid))
+                log.info("数据长度",string.format("%d",recvlen))
+                -- log.info("数据长度复印",string.format("%d",recvlen))
+
+                local testData = string.sub(recvdata, 1, 1)
+                test2Data = string.toHex(testData)
+
+
+                if(test2Data == 'C1')then --报告离线数据
+                    offlineDataSizeStr = string.sub(recvdata, 3, 6)
+                    log.info("数据类型：","离线数据长度-->" .. string.toHex(offlineDataSizeStr))
+                elseif(test2Data == 'D1')then  --压力值应答
+                    log.info("数据类型：","压力数据")
+                elseif(test2Data == 'E5')then  
+                    log.info("数据类型：","笔型号")  
+                elseif(test2Data == 'A9')then  
+                    log.info("数据类型：","笔电量-->")  
+                elseif(test2Data == 'FE' or test2Data == 'FC')then
+                    log.info("数据类型：","落笔点或移动点-->" .. string.toHex(data))
+                    local newPck = tcp_decode(data,recvlen)
+                    log.info("新版封包：",string.toHex(newPck))
+                    mySocket.send(newPck)
+                elseif(test2Data == 'E1')then
+                    log.info("数据类型：","点读码-->" .. string.toHex(data))
+                else
+                    log.info("未知数据：",string.toHex(data))         
+                end
+        
+            end
+        else -- 事件等待超时
+            -- 判断是否蓝牙断开连接
+            if btStatus == false then
+                log.info("退出接收循环")
                 break
             end
-            uuid = recvuuid
-            data = data .. recvdata
-            log.info("——————————————————","收到数据")
-            log.info("接收到的UUID", string.toHex(uuid))
-            log.info("数据长度",string.format("%d",recvlen))
-            -- log.info("数据长度复印",string.format("%d",recvlen))
-
-            local testData = string.sub(recvdata, 1, 1)
-            test2Data = string.toHex(testData)
-
-
-            if(test2Data == 'C1')then --报告离线数据
-                offlineDataSizeStr = string.sub(recvdata, 3, 6)
-                log.info("数据类型：","离线数据长度-->" .. string.toHex(offlineDataSizeStr))
-            elseif(test2Data == 'D1')then  --压力值应答
-                log.info("数据类型：","压力数据")
-            elseif(test2Data == 'E5')then  
-                log.info("数据类型：","笔型号")  
-            elseif(test2Data == 'A9')then  
-                log.info("数据类型：","笔电量-->")  
-            elseif(test2Data == 'FE' or test2Data == 'FC')then
-                log.info("数据类型：","落笔点或移动点-->" .. string.toHex(data))
-                local newPck = tcp_decode(data,recvlen)
-                log.info("新版封包：",string.toHex(newPck))
-                mySocket.send(newPck)
-            elseif(test2Data == 'E1')then
-                log.info("数据类型：","点读码-->" .. string.toHex(data))
-            else
-                log.info("未知数据：",string.toHex(data))         
-            end
-       
         end
-
     end
 end
 
 
 
-ble_test = {init, poweron, connect, data_trans}
+-- ble_test = {init, poweron, connect, data_trans}
 
-sys.taskInit(function()
-    for _, f in ipairs(ble_test) do
-        f()
-    end
+sys.taskInit(
+    function()
+        init()
+        poweron()
+        while true do
+            connect()
+            data_trans()
+        end
 end)
+
+
+-- sys.taskInit(function()
+--     for _, f in ipairs(ble_test) do
+--         f()
+--     end
+-- end)
 
 
 
