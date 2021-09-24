@@ -1,6 +1,6 @@
 require "mySocket"
 --require "myDebug"
-
+require "protocol"
 module(..., package.seeall)
 
 --local ip,prot,c = "47.108.200.115", "1883"     
@@ -137,74 +137,6 @@ local function scan()
     return true
 end
 
-function str2hex(str)
-	--判断输入类型	
-	if (type(str)~="string") then
-	    return nil,"str2hex invalid input type"
-	end
-	--滤掉分隔符
-	str=str:gsub("[%s%p]",""):upper()
-	--检查内容是否合法
-	if(str:find("[^0-9A-Fa-f]")~=nil) then
-	    return nil,"str2hex invalid input content"
-	end
-	--检查字符串长度
-	if(str:len()%2~=0) then
-	    return nil,"str2hex invalid input lenth"
-	end
-	--拼接字符串
-	local index=1
-	local ret=""
-	for index=1,str:len(),2 do
-	    ret=ret..string.char(tonumber(str:sub(index,index+1),16))
-	end
- 
-	return ret
-end
-
-
-
--- local last_time=0
--- local second_times=0
--- local pck
-local PckNumber = 0
--- [首部]+[协议版本 协议类型]+[包长]+[MAC]+[秒级时间戳]+[包编号]+[原AP封装包]
-function tcp_decode(data,len)
-    -- F0AA0101 001E 112233445566 010203040506 0001 A1A2A3A4A5A6A7A8A9A0
-    local head="F0AA0101"  
-    --毫秒级时间戳
-    local time="010203040506"
-    local mac = string.gsub(pen_addr, ':',"")
-    local pcklen = string.format("%04x",len+6+6+6+2)
-    PckNumber = PckNumber+1 
-    local pckNo = string.format("%04x",PckNumber) 
-    local temp = string.toHex(data)
-    local pck=""
-    pck = head .. pcklen ..mac .. time .. pckNo .. temp
-    return str2hex(pck)
-    -- return pck
-end
-
-function ap_data(data,len)
-    local data_new
-    local mac_addr = string.gsub(pen_addr, ':',"")  --去除冒号
-    local now_time = os.time()
-
-    log.info("bt.mac_addr----------",mac_addr)
-    strlen = string.format("%04x",len)
-    -- 封装了AP基础包   
-    data_new = str2hex("f0aa" .. "01" .. "ffff" .. mac_addr .. strlen)
-    data_new = data_new   .. data
-    return data_new
-end
-
---用于将笔的电量信息封包上传
--- function ap_power_data(data,len)
---     local pck
---     -- 原命令格式 0XA9 0x02 0x64 0x00
---     -- 封为 0XF0AB 0x08 mac 0X64 0X00
-
--- end
 
 local function data_trans()
 
@@ -269,10 +201,11 @@ local function data_trans()
                 elseif(test2Data == 'E5')then  
                     log.info("数据类型：","笔型号")  
                 elseif(test2Data == 'A9')then  
-                    log.info("数据类型：","笔电量-->".. string.sub(recvdata, 3,3).."充电状态：" .. string.sub(recvdata, 4,4))  
+                    log.info("数据类型：","笔电量-->".. string.toHex(string.sub(recvdata, 3,3)).."充电状态：" .. string.toHex(string.sub(recvdata, 4,4)))  
                 elseif(test2Data == 'FE' or test2Data == 'FC')then
                     log.info("数据类型：","落笔点或移动点-->" .. string.toHex(data))
-                    local newPck = tcp_decode(data,recvlen)
+                    --local newPck = trackDecode(data,recvlen)
+                    local newPck = protocol.trackDecode(pen_addr,data,recvlen)
                     log.info("新版封包：",string.toHex(newPck))
                     mySocket.send(newPck)
                 elseif(test2Data == 'E1')then
@@ -293,9 +226,6 @@ local function data_trans()
 end
 
 
-
--- ble_test = {init, poweron, connect, data_trans}
-
 sys.taskInit(
     function()
         init()
@@ -305,17 +235,3 @@ sys.taskInit(
             data_trans()
         end
 end)
-
-
--- sys.taskInit(function()
---     for _, f in ipairs(ble_test) do
---         f()
---     end
--- end)
-
-
-
-
-
-
-

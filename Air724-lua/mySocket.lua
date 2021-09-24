@@ -1,4 +1,5 @@
 require "socket"
+require "protocol"
 module(...,package.seeall)
 
 
@@ -30,10 +31,8 @@ function socketInMsgproc(socketClient)
         result,data = socketClient:recv(60000,"APP_SOCKET_SEND_DATA")
         --接收到数据
         if result then
-            log.info("socket接收到数据：",data)
-                
+            log.info("socket接收到数据：",data)  
             --TODO：根据需求自行处理data
-            
         else
             break
         end
@@ -52,28 +51,15 @@ local function insertMsg(data,user)
     sys.publish("APP_SOCKET_SEND_DATA")
 end
 
--- 心跳包
--- local heartPck="heart data\r\n"
--- function setHeartPck(newStr)
---     heartPck = newStr
--- end
--- local function sndHeartCb(result)
---     log.info("socketOutMsg.sndHeartCb",result)
---     if result then sys.timerStart(sndHeart,60000) end
--- end
--- function sndHeart()
---     log.info("heart!")
---     -- insertMsg(heartPck,{cb=sndHeartCb})
--- end
 
--- local function sndLocCb(result)
---     log.info("socketOutMsg.sndLocCb",result)
---     if result then sys.timerStart(sndLoc,20000) end
--- end
-
--- function sndLoc()
---     insertMsg("location data\r\n",{cb=sndLocCb})
--- end
+-- sys.timerStart(heartbeatCb,30000)
+-- sys.timerStop(heartbeatCb)
+function heartbeatCb()
+    log.info("设备心跳（TCP）")
+    heart = protocol.heartDecode("aabbccddeeff")
+    send(heart)
+    sys.timerStart(heartbeatCb,30000)
+end
 
 function sendCB()
     log.info("socket send cb 发送回调")
@@ -143,6 +129,7 @@ sys.taskInit(
                 --阻塞执行socket connect动作，直至成功
                 if socketClient:connect(tcpServerIp,tcpServerPort) then
                     log.info("TCP连接成功")
+                    sys.timerStart(heartbeatCb,30000)
                     retryConnectCnt = 0
                     ready = true
 
@@ -166,6 +153,7 @@ sys.taskInit(
                     retryConnectCnt = retryConnectCnt+1
                     log.info("TCP连接失败",retryConnectCnt)
                 end
+                sys.timerStop(heartbeatCb)
                 --断开socket连接
                 socketClient:close()
                 -- if retryConnectCnt>=5 then link.shut() retryConnectCnt=0 end
