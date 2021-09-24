@@ -261,16 +261,15 @@ local function data_trans()
                 local testData = string.sub(recvdata, 1, 1)
                 test2Data = string.toHex(testData)
 
-
                 if(test2Data == 'C1')then --报告离线数据
                     offlineDataSizeStr = string.sub(recvdata, 3, 6)
                     log.info("数据类型：","离线数据长度-->" .. string.toHex(offlineDataSizeStr))
-                elseif(test2Data == 'D1')then  --压力值应答
+                elseif(test2Data == 'D1')then
                     log.info("数据类型：","压力数据")
                 elseif(test2Data == 'E5')then  
                     log.info("数据类型：","笔型号")  
                 elseif(test2Data == 'A9')then  
-                    log.info("数据类型：","笔电量-->")  
+                    log.info("数据类型：","笔电量-->".. string.sub(recvdata, 3,3).."充电状态：" .. string.sub(recvdata, 4,4))  
                 elseif(test2Data == 'FE' or test2Data == 'FC')then
                     log.info("数据类型：","落笔点或移动点-->" .. string.toHex(data))
                     local newPck = tcp_decode(data,recvlen)
