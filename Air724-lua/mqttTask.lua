@@ -111,6 +111,12 @@ sys.taskInit(
                                 -- if(mqttClient:publish("/penbox/AABBCCDDEEFF/ACK","test msg!",0))then
                                 --     log.info("发送成功")
                                 -- end
+                            else -- 如果未接收到数据
+                                log.info("mqtt退出接收",data)
+                                if(data ~= "timeout") then
+                                    log.info("mqtt接收错误，尝试重新建立连接",data)
+                                    break
+                                end
                             end
                         end    
                     end

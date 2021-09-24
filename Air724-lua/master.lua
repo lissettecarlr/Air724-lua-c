@@ -1,5 +1,5 @@
 require "mySocket"
-require "myDebug"
+--require "myDebug"
 
 module(..., package.seeall)
 
