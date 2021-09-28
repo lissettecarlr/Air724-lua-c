@@ -12,6 +12,8 @@ local function printTime()
     local tClock = os.date("*t")
     log.info("printTime", 
         string.format("%04d-%02d-%02d %02d:%02d:%02d",tClock.year,tClock.month,tClock.day,tClock.hour,tClock.min,tClock.sec))
+    log.info("时间戳--->",os.time())
+
 end
 
 --每隔10秒输出1次当前模块系统时间

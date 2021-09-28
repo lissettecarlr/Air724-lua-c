@@ -131,6 +131,6 @@ local function Oled_main()
 end   
 
 --启动系统框架
-sys.taskInit(Oled_main)
+--sys.taskInit(Oled_main)
 sys.init(0, 0)
 sys.run()

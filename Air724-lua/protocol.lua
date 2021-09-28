@@ -21,7 +21,6 @@ function str2hex(inputStr)
 	for index=1,inputStr:len(),2 do
 	    ret=ret..string.char(tonumber(inputStr:sub(index,index+1),16))
 	end
- 
 	return ret
 end
 
@@ -30,7 +29,8 @@ end
 function heartDecode(mac)
     local head="F0AA0105"  
     --毫秒级时间戳
-    local time="01020304"
+    local time = string.format("%08x",os.time()) 
+    --local time="01020304"
     local mac = string.gsub(mac, ':',"")
     local pcklen = string.format("%04x",16)
     local pck=""
@@ -60,14 +60,41 @@ function trackDecode(mac,data,len)
     -- F0AA0101 001E 112233445566 010203040506 0001 A1A2A3A4A5A6A7A8A9A0
     local head="F0AA0101"  
     --毫秒级时间戳
-    local time="010203040506"
+    --local time="010203040506"
+    local timeS = string.format("%08x",os.time()) 
+    local timeMs = string.format("%04x",getMS()) 
+    log.info("毫秒时间戳--->",timeS..timeMs)
+
     local mac = string.gsub(mac, ':',"")
     local pcklen = string.format("%04x",len+6+6+6+2)
     PckNumber = PckNumber+1 
     local pckNo = string.format("%04x",PckNumber) 
     local temp = string.toHex(data)
     local pck=""
-    pck = head .. pcklen ..mac .. time .. pckNo .. temp
+    pck = head .. pcklen ..mac .. timeS .. timeMs .. pckNo .. temp
     return str2hex(pck)
     -- return pck
+end
+
+local msCount=0
+local LastOsTime=0
+
+function  millisecondTimerCount()
+    if(LastOsTime == 0)then
+        LastOsTime = os.time()
+    end 
+    nowOsTime = os.time()
+    if(LastOsTime ~= nowOsTime)then
+        msCount=0
+        LastOsTime = nowOsTime
+    end
+    msCount = msCount +1 
+end
+
+function getMS()
+    return msCount
+end
+
+function msTimerStart()
+    sys.timerLoopStart(millisecondTimerCount,1)
 end

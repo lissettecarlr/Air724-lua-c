@@ -132,7 +132,8 @@ sys.taskInit(
                     sys.timerStart(heartbeatCb,30000)
                     retryConnectCnt = 0
                     ready = true
-
+                    --开启毫秒定时器
+                    protocol.msTimerStart()
                     --send("smartpen connect")
                     -- socketOutMsgInit()
                     --循环处理接收和发送的数据
@@ -147,7 +148,6 @@ sys.taskInit(
                         end
                     end
                     -- socketOutMsgUnInit()
-
                     ready = false
                 else
                     retryConnectCnt = retryConnectCnt+1
