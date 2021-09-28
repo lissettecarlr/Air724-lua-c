@@ -28,7 +28,7 @@ end
 -- mySocket.send(newPck)
 function heartDecode(mac)
     local head="F0AA0105"  
-    --毫秒级时间戳
+    --秒级时间戳
     local time = string.format("%08x",os.time()) 
     --local time="01020304"
     local mac = string.gsub(mac, ':',"")
@@ -75,6 +75,26 @@ function trackDecode(mac,data,len)
     return str2hex(pck)
     -- return pck
 end
+
+
+--连接状态包
+function contentDecode(mac,sta)
+    local mac = string.gsub(mac, ':',"")
+    local time = string.format("%08x",os.time()) 
+
+    local head=""
+    if(sta == true)then
+        head = "F0AA01070010"
+    else
+        head = "F0AA01080010"
+    end
+
+    local pck=""
+    pck = head ..mac .. time
+    return str2hex(pck)   
+end    
+    
+-- 毫秒计时器
 
 local msCount=0
 local LastOsTime=0

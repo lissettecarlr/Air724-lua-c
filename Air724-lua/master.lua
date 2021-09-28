@@ -20,8 +20,11 @@ local function init()
         elseif msg.event == btcore.MSG_BLE_CONNECT_CNF then
             sys.publish("BT_CONNECT_IND", {["handle"] = msg.handle, ["result"] = msg.result}) --蓝牙连接成功
         elseif msg.event == btcore.MSG_BLE_DISCONNECT_CNF then
-            log.info("bt", "ble disconnect") --蓝牙断开连接
+            log.info("bt", "蓝牙断开连接！！！") --蓝牙断开连接
             btStatus = false
+            disconpck = protocol.contentDecode(pen_addr,false)
+            mySocket.send(disconpck)
+
         elseif msg.event == btcore.MSG_BLE_DATA_IND then
             sys.publish("BT_DATA_IND", {["data"] = msg.data, ["uuid"] = msg.uuid, ["len"] = msg.len})  --接收到的数据内容
         elseif msg.event == btcore.MSG_BLE_SCAN_CNF then
@@ -142,11 +145,16 @@ local function data_trans()
 
     _, bt_connect = sys.waitUntil("BT_CONNECT_IND") --等待连接成功
     if bt_connect.result ~= 0 then
+        log.info("bt","尝试连接蓝牙超时！！！")
         return false
     end
+    log.info("bt", "蓝牙连接成功！！！")
     --修改蓝牙状态为已连接
     btStatus = true
     --链接成功
+    conpck = protocol.contentDecode(pen_addr,true)
+    mySocket.send(conpck)
+
     log.info("bt.connect_handle", bt_connect.handle)--蓝牙连接句柄
     log.info("bt", "find all service uuid")
     btcore.findservice()--发现所有16bit服务uuid
@@ -233,5 +241,6 @@ sys.taskInit(
         while true do
             connect()
             data_trans()
+            sys.wait(1000)
         end
 end)
