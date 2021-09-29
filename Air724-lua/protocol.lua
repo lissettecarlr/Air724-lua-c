@@ -94,6 +94,19 @@ function contentDecode(mac,sta)
     return str2hex(pck)   
 end    
     
+-- 笔信息包
+function penInfoDecode(mac,sta,pow)
+
+    local head="F0AA010A000E"
+    local mac = string.gsub(mac, ':',"")
+
+    -- local s = string.format("%02x",sta) 
+    -- local p = string.format("%02x",pow) 
+    local pck=""
+    pck = head ..mac .. sta .. pow
+    return str2hex(pck) 
+
+end
 -- 毫秒计时器
 
 local msCount=0

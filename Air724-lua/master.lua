@@ -209,7 +209,12 @@ local function data_trans()
                 elseif(test2Data == 'E5')then  
                     log.info("数据类型：","笔型号")  
                 elseif(test2Data == 'A9')then  
-                    log.info("数据类型：","笔电量-->".. string.toHex(string.sub(recvdata, 3,3)).."充电状态：" .. string.toHex(string.sub(recvdata, 4,4)))  
+                    pow = string.toHex(string.sub(recvdata, 3,3))
+                    sta = string.toHex(string.sub(recvdata, 4,4))
+                    log.info("数据类型：","笔电量-->".. pow .."充电状态：" .. sta)  
+                    penInfo = protocol.penInfoDecode(pen_addr,sta,pow)
+                    mySocket.send(penInfo)
+
                 elseif(test2Data == 'FE' or test2Data == 'FC')then
                     log.info("数据类型：","落笔点或移动点-->" .. string.toHex(data))
                     --local newPck = trackDecode(data,recvlen)
